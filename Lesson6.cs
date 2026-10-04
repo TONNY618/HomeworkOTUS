@@ -3,6 +3,9 @@
 namespace HomeworkOTUS;
 
 internal static class Lesson6 {
+	private const int MinLimit = 1;
+	private const int MaxLimit = 100;
+
 	private static string _username = "";
 	private static readonly List<string> Tasks = [];
 	private static int _maxTaskCount;
@@ -14,27 +17,18 @@ internal static class Lesson6 {
 		                  Доступные команды: /start /help /info /echo /addtask /showtasks /removetask /exit
 		                  """);
 
-		while (true) {
-			try {
-				InitLimits();
-				break;
-			} catch (ArgumentException e) {
-				Console.WriteLine(e.Message);
-			} catch (Exception e) {
-				Console.WriteLine($"""
-				                   Произошла непредвиденная ошибка:
-				                   Type: {e.GetType().FullName}
-				                   Message: {e.Message}
-				                   StackTrace: {e.StackTrace}
-				                   InnerException: {e.InnerException?.Message ?? "отсутствует"}
-				                   """);
-			}
-		}
+		var isRunning = true;
+		var hasLimits = false;
 
-		while (true) {
-			var prefix = string.IsNullOrEmpty(_username) ? "От bot:" : $"От bot для {_username}:";
-
+		while (isRunning) {
 			try {
+				if (!hasLimits) {
+					InitLimits();
+					hasLimits = true;
+				}
+
+				var prefix = string.IsNullOrEmpty(_username) ? "От bot:" : $"От bot для {_username}:";
+
 				Console.Write("\nВведите команду: ");
 				var raw = Console.ReadLine()?.Trim();
 				if (string.IsNullOrEmpty(raw)) continue;
@@ -65,7 +59,8 @@ internal static class Lesson6 {
 						break;
 					case "exit":
 						Console.WriteLine($"{prefix} выключаюсь.");
-						return;
+						isRunning = false;
+						break;
 					default:
 						Console.WriteLine($"{prefix} неизвестная команда. Введите /help для получения справки.");
 						break;
@@ -108,11 +103,11 @@ internal static class Lesson6 {
 	}
 
 	private static void InitLimits() {
-		Console.Write("Введите максимум для количества задач (с 1 по 100): ");
-		_maxTaskCount = ParseAndValidateInt(Console.ReadLine(), 1, 100);
+		Console.Write($"Введите максимум для количества задач (с {MinLimit} по {MaxLimit}): ");
+		_maxTaskCount = ParseAndValidateInt(Console.ReadLine(), MinLimit, MaxLimit);
 
-		Console.Write("Введите максимум для длины задачи (с 1 по 100): ");
-		_maxTaskLength = ParseAndValidateInt(Console.ReadLine(), 1, 100);
+		Console.Write($"Введите максимум для длины задачи (с {MinLimit} по {MaxLimit}): ");
+		_maxTaskLength = ParseAndValidateInt(Console.ReadLine(), MinLimit, MaxLimit);
 	}
 
 	private static void HandleStart(string prefix) {
@@ -141,9 +136,9 @@ internal static class Lesson6 {
 	private static void HandleInfo(string prefix) {
 		Console.WriteLine($"""
 		                   {prefix} информация о программе:
-		                   Версия: 0.0.3
+		                   Версия: 0.0.4
 		                   Дата создания: 29.09.2026
-		                   Дата обновления: 01.10.2026
+		                   Дата обновления: 04.10.2026
 		                   """);
 	}
 
