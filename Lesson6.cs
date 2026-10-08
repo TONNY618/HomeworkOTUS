@@ -1,4 +1,5 @@
 ﻿using HomeworkOTUS.Exceptions;
+using HomeworkOTUS.Models;
 
 namespace HomeworkOTUS;
 
@@ -6,15 +7,15 @@ internal static class Lesson6 {
 	private const int MinLimit = 1;
 	private const int MaxLimit = 100;
 
-	private static string _username = "";
-	private static readonly List<string> Tasks = [];
+	private static ToDoUser? _user;
+	private static readonly List<ToDoItem> Tasks = [];
 	private static int _maxTaskCount;
 	private static int _maxTaskLength;
 
 	private static void Main() {
 		Console.WriteLine("""
 		                  Здравствуйте, это консольный бот.
-		                  Доступные команды: /start /help /info /echo /addtask /showtasks /removetask /exit
+		                  Доступные команды: /start /help /info /echo /addtask /showtasks /showalltasks /completetask /removetask /exit
 		                  """);
 
 		var isRunning = true;
@@ -27,13 +28,14 @@ internal static class Lesson6 {
 					hasLimits = true;
 				}
 
-				var prefix = string.IsNullOrEmpty(_username) ? "От bot:" : $"От bot для {_username}:";
+				var prefix = _user == null ? "От bot:" : $"От bot для {_user.TelegramUserName}:";
 
 				Console.Write("\nВведите команду: ");
 				var raw = Console.ReadLine()?.Trim();
 				if (string.IsNullOrEmpty(raw)) continue;
 
 				var parts = raw.Split(' ', 2);
+				var argument = parts.Length > 1 ? parts[1] : "";
 
 				switch (parts[0].TrimStart('/').ToLower()) {
 					case "start":
@@ -46,13 +48,19 @@ internal static class Lesson6 {
 						HandleInfo(prefix);
 						break;
 					case "echo":
-						HandleEcho(prefix, parts.Length > 1 ? parts[1] : "");
+						HandleEcho(prefix, argument);
 						break;
 					case "addtask":
 						HandleAddTask(prefix);
 						break;
 					case "showtasks":
-						ShowTasks(prefix);
+						HandleShowTasks(prefix);
+						break;
+					case "showalltasks":
+						HandleShowAllTasks(prefix);
+						break;
+					case "completetask":
+						HandleCompleteTask(prefix, argument);
 						break;
 					case "removetask":
 						HandleRemoveTask(prefix);
@@ -115,8 +123,8 @@ internal static class Lesson6 {
 		var input = Console.ReadLine();
 		ValidateString(input);
 
-		_username = input!.Trim();
-		Console.WriteLine($"От bot: здравствуйте, {_username}. Теперь вам доступна команда /echo");
+		_user = new ToDoUser(input!.Trim());
+		Console.WriteLine($"От bot: здравствуйте, {_user.TelegramUserName}. Теперь вам доступна команда /echo и создание задач.");
 	}
 
 	private static void HandleHelp(string prefix) {
@@ -127,7 +135,9 @@ internal static class Lesson6 {
 		                   /info => пишет версию и дату создания этой программы.
 		                   /echo <text> => выводит введённый текст (можно использовать только после /start).
 		                   /addtask => просит описание задачи, а после добавляет её в список.
-		                   /showtasks => показывает список всех задач.
+		                   /showtasks => показывает список активных задач.
+		                   /showalltasks => отображает список абсолютно всех задач.
+		                   /completetask <id> => помечает задачу как выполненную по её Id.
 		                   /removetask => называет список всех задач и запрашивает порядковый номер задачи для её удаления.
 		                   /exit => завершает работу программы.
 		                   """);
@@ -136,14 +146,14 @@ internal static class Lesson6 {
 	private static void HandleInfo(string prefix) {
 		Console.WriteLine($"""
 		                   {prefix} информация о программе:
-		                   Версия: 0.0.4
+		                   Версия: 0.1.0
 		                   Дата создания: 29.09.2026
-		                   Дата обновления: 04.10.2026
+		                   Дата обновления: 07.10.2026
 		                   """);
 	}
 
 	private static void HandleEcho(string prefix, string text) {
-		if (string.IsNullOrEmpty(_username)) {
+		if (_user == null) {
 			Console.WriteLine($"{prefix} команда доступна только после регистрации через /start");
 			return;
 		}
@@ -153,6 +163,11 @@ internal static class Lesson6 {
 	}
 
 	private static void HandleAddTask(string prefix) {
+		if (_user == null) {
+			Console.WriteLine($"{prefix} команда доступна только после регистрации через /start");
+			return;
+		}
+
 		if (Tasks.Count >= _maxTaskCount)
 			throw new TaskCountLimitException(_maxTaskCount);
 
@@ -165,15 +180,67 @@ internal static class Lesson6 {
 		if (task.Length > _maxTaskLength)
 			throw new TaskLengthLimitException(task.Length, _maxTaskLength);
 
-		if (Tasks.Contains(task, StringComparer.OrdinalIgnoreCase))
+		if (Tasks.Any(t => string.Equals(t.Name, task, StringComparison.OrdinalIgnoreCase)))
 			throw new DuplicateTaskException(task);
 
-		Tasks.Add(task);
-		Console.WriteLine($"{prefix} задача \"{task}\" добавлена в список.");
+		var newItem = new ToDoItem(_user, task);
+		Tasks.Add(newItem);
+		Console.WriteLine($"{prefix} задача \"{newItem.Name}\" добавлена в список ({newItem.Id}).");
+	}
+
+	private static void HandleShowTasks(string prefix) {
+		var active = Tasks.Where(t => t.State == ToDoItemState.Active).ToList();
+
+		if (active.Count == 0) {
+			Console.WriteLine($"{prefix} список активных задач пуст.");
+			return;
+		}
+
+		Console.WriteLine($"{prefix} список активных задач:");
+		for (var i = 0; i < active.Count; i++)
+			Console.WriteLine($"{i + 1}. {active[i].Name} - {active[i].CreatedAt:dd.MM.yyyy HH:mm:ss} - {active[i].Id}");
+	}
+
+	private static bool HandleShowAllTasks(string prefix) {
+		if (Tasks.Count == 0) {
+			Console.WriteLine($"{prefix} список задач пуст.");
+			return false;
+		}
+
+		Console.WriteLine($"{prefix} список всех задач:");
+		for (var i = 0; i < Tasks.Count; i++)
+			Console.WriteLine($"{i + 1}. ({Tasks[i].State}) {Tasks[i].Name} - {Tasks[i].CreatedAt:dd.MM.yyyy HH:mm:ss} - {Tasks[i].Id}");
+
+		return true;
+	}
+
+	private static void HandleCompleteTask(string prefix, string argument) {
+		ValidateString(argument);
+
+		if (!Guid.TryParse(argument, out var id)) {
+			Console.WriteLine($"{prefix} неверный формат Id.");
+			return;
+		}
+
+		var task = Tasks.FirstOrDefault(t => t.Id == id);
+		if (task == null) {
+			Console.WriteLine($"{prefix} задача с таким Id не найдена.");
+			return;
+		}
+
+		if (task.State == ToDoItemState.Completed) {
+			Console.WriteLine($"{prefix} задача уже выполнена.");
+			return;
+		}
+
+		task.Complete();
+
+		Console.WriteLine($"{prefix} задача \"{task.Name}\" выполнена.");
 	}
 
 	private static void HandleRemoveTask(string prefix) {
-		if (!ShowTasks(prefix)) return;
+		if (!HandleShowAllTasks(prefix)) return;
+
 		while (true) {
 			Console.Write("Напишите порядковый номер задачи для удаления (напишите 0 для выхода): ");
 			var input = Console.ReadLine();
@@ -188,22 +255,9 @@ internal static class Lesson6 {
 
 			if (num == 0) return;
 
-			Console.WriteLine($"Задача \"{Tasks[num - 1]}\" удалена.");
+			Console.WriteLine($"Задача \"{Tasks[num - 1].Name}\" удалена.");
 			Tasks.RemoveAt(num - 1);
 			break;
 		}
-	}
-
-	private static bool ShowTasks(string prefix) {
-		if (Tasks.Count <= 0) {
-			Console.WriteLine($"{prefix} список задач пуст.");
-			return false;
-		}
-
-		Console.WriteLine($"{prefix} список задач:");
-		for (var i = 0; i < Tasks.Count; i++)
-			Console.WriteLine($"{i + 1}. {Tasks[i]}");
-
-		return true;
 	}
 }
