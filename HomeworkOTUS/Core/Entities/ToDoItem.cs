@@ -1,4 +1,4 @@
-namespace HomeworkOTUS.Models;
+namespace HomeworkOTUS.Core.Entities;
 
 public class ToDoItem {
 	public Guid Id {get; init;}
