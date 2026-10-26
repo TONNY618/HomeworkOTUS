@@ -1,4 +1,4 @@
-namespace HomeworkOTUS.Models;
+namespace HomeworkOTUS.Core.Entities;
 
 public enum ToDoItemState {
 	Active,

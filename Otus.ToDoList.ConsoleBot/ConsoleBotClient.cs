@@ -10,8 +10,8 @@ public class ConsoleBotClient : ITelegramBotClient {
 	private readonly User _user;
 
 	public ConsoleBotClient() {
-		_chat = new Chat {Id = Random.Shared.Next()}; // генерируем чат с рандомным Id-шником
-		_user = new User {Id = Random.Shared.Next(), Username = $"ConsoleUser_{Guid.NewGuid()}"}; // генерируем пользовпателя который общается с ботом
+		_chat = new Chat {Id = Random.Shared.Next()}; // Генерируем чат с рандомным Id-шником
+		_user = new User {Id = Random.Shared.Next(), Username = $"ConsoleUser_{Guid.NewGuid()}"}; // Генерируем пользователя который общается с ботом
 	}
 
 	public void SendMessage(Chat chat, string text) {
@@ -26,27 +26,27 @@ public class ConsoleBotClient : ITelegramBotClient {
 	public void StartReceiving(IUpdateHandler handler) {
 		ArgumentNullException.ThrowIfNull(handler, nameof(handler));
 
-		var cts = new CancellationTokenSource(); // дает возможность при завершении работы прервать запущенный асинхронные операции    
-		ConsoleCancelEventHandler cancelHandler = (sender, e) => //Обработчик выхода из консоли(по нажатию Ctrl+C)
+		var cts = new CancellationTokenSource(); // Дает возможность при завершении работы прервать запущенные асинхронные операции
+		ConsoleCancelEventHandler cancelHandler = (sender, e) => // Обработчик выхода из консоли(по нажатию Ctrl+C)
 		{
-			cts.Cancel(); // прерываем запущенные синхронные операции
+			cts.Cancel(); // Прерываем запущенные синхронные операции
 			e.Cancel = true;
 		};
-		Console.CancelKeyPress += cancelHandler; //Добавляем обработчик выхода из консоли
+		Console.CancelKeyPress += cancelHandler; // Добавляем обработчик выхода из консоли
 
 		try {
 			WriteLineColor("Бот запущен. Введите сообщение", ConsoleColor.Magenta);
-			var counter = 0; // счетчик полученных сообщений, который мы используем, как идентификатор для получаемого сообщения
+			var counter = 0; // Счетчик полученных сообщений, который мы используем, как идентификатор для получаемого сообщения
 
-			while (cts.IsCancellationRequested is false) // Пока не cts.Cancel(); ( пока не нажали Ctrl+C)
+			while (cts.IsCancellationRequested is false) // Пока не cts.Cancel(); (пока не нажали Ctrl+C)
 			{
-				var input = Console.ReadLine(); // вводим в консоль - считываем сообщение в консольный бот
+				var input = Console.ReadLine(); // Вводим в консоль - считываем сообщение в консольный бот
 				if (input is null)
 					break;
 
-				var update = new Update // обновление - которое генерирует консольный бот
+				var update = new Update // Обновление - которое генерирует консольный бот
 				{
-					Message = new Message // сообщение - содержимое геннерируемого обновления
+					Message = new Message // Сообщение - содержимое генерируемого обновления
 					{
 						Id = Interlocked.Increment(ref counter),
 						Text = input,
@@ -55,11 +55,11 @@ public class ConsoleBotClient : ITelegramBotClient {
 					}
 				};
 
-				handler.HandleUpdateAsync(this, update); // обрабатываем сгенерированное сообщение
+				handler.HandleUpdateAsync(this, update); // Обрабатываем сгенерированное сообщение
 			}
 		} finally {
-			Console.CancelKeyPress -= cancelHandler; // очистка ресурсов, отписываемся от обработчика
-			cts.Dispose(); // очистка ресурсов
+			Console.CancelKeyPress -= cancelHandler; // Очистка ресурсов, отписываемся от обработчика
+			cts.Dispose(); // Очистка ресурсов
 			WriteLineColor("Бот остановлен", ConsoleColor.Magenta);
 		}
 	}

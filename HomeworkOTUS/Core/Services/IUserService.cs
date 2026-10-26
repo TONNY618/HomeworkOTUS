@@ -1,6 +1,6 @@
-using HomeworkOTUS.Models;
+using HomeworkOTUS.Core.Entities;
 
-namespace HomeworkOTUS.Services;
+namespace HomeworkOTUS.Core.Services;
 
 public interface IUserService {
 	ToDoUser RegisterUser(long telegramUserId, string telegramUserName);

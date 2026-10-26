@@ -1,17 +1,19 @@
-using HomeworkOTUS.Models;
-using HomeworkOTUS.Services;
+using HomeworkOTUS.Core.Entities;
+using HomeworkOTUS.Core.Services;
 using Otus.ToDoList.ConsoleBot;
 using Otus.ToDoList.ConsoleBot.Types;
 
-namespace HomeworkOTUS.Handlers;
+namespace HomeworkOTUS.TelegramBot;
 
 public class UpdateHandler : IUpdateHandler {
 	private readonly IUserService _userService;
 	private readonly IToDoService _toDoService;
+	private readonly IToDoReportService _toDoReportService;
 
-	public UpdateHandler(IUserService userService, IToDoService toDoService) {
+	public UpdateHandler(IUserService userService, IToDoService toDoService, IToDoReportService toDoReportService) {
 		_userService = userService;
 		_toDoService = toDoService;
+		_toDoReportService = toDoReportService;
 	}
 
 	public void HandleUpdateAsync(ITelegramBotClient botClient, Update update) {
@@ -54,19 +56,21 @@ public class UpdateHandler : IUpdateHandler {
 					                            /showalltasks => отображает список абсолютно всех задач.
 					                            /completetask <id> => помечает задачу как выполненную по её Id.
 					                            /removetask <id> => удаляет задачу по её Id.
+					                            /report => выводит статистику по задачам.
+					                            /find <prefix> => найти задачи, которые начинаются с указанного текста.
 					                            """);
 					break;
 				case "info":
 					botClient.SendMessage(chat, """
 					                            Информация о программе:
-					                            Версия: 0.2.0
+					                            Версия: 0.3.0
 					                            Дата создания: 29.09.2026
-					                            Дата обновления: 15.10.2026
+					                            Дата обновления: 25.10.2026
 					                            """);
 					break;
 				case "addtask":
 					if (string.IsNullOrWhiteSpace(argument)) {
-						botClient.SendMessage(chat, "Описание задачи не может быть пустым");
+						botClient.SendMessage(chat, "Описание задачи не может быть пустым.");
 						return;
 					}
 
@@ -98,6 +102,19 @@ public class UpdateHandler : IUpdateHandler {
 					_toDoService.Delete(remId);
 
 					botClient.SendMessage(chat, $"Задача {remId} удалена.");
+					break;
+				case "report":
+					var (total, completed, active, generatedAt) = _toDoReportService.GetUserStats(user!.UserId);
+					botClient.SendMessage(chat, $"{generatedAt:dd.MM.yyyy HH:mm:ss}. Всего: {total}, завершённые: {completed}, активные: {active}.");
+					break;
+				case "find":
+					if (string.IsNullOrWhiteSpace(argument)) {
+						botClient.SendMessage(chat, "Префикс не может быть пустым.");
+						return;
+					}
+
+					var foundTasks = _toDoService.Find(user!, argument);
+					RevealTasks(foundTasks, $"задач с префиксом {argument}", true);
 					break;
 				default:
 					botClient.SendMessage(chat, "Неизвестная команда. Введите /help для получения справки.");

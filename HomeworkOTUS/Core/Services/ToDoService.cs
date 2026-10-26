@@ -1,14 +1,16 @@
-using HomeworkOTUS.Exceptions;
-using HomeworkOTUS.Models;
+using HomeworkOTUS.Core.DataAccess;
+using HomeworkOTUS.Core.Entities;
+using HomeworkOTUS.Core.Exceptions;
 
-namespace HomeworkOTUS.Services;
+namespace HomeworkOTUS.Core.Services;
 
 public class ToDoService : IToDoService {
-	private readonly List<ToDoItem> _tasks = [];
+	private readonly IToDoRepository _toDoRepository;
 	private readonly int _maxTaskCount;
 	private readonly int _maxTaskLength;
 
-	public ToDoService(int maxTaskCount = 100, int maxTaskLength = 100) {
+	public ToDoService(IToDoRepository toDoRepository, int maxTaskCount = 100, int maxTaskLength = 100) {
+		_toDoRepository = toDoRepository;
 		_maxTaskCount = maxTaskCount;
 		_maxTaskLength = maxTaskLength;
 	}
@@ -19,39 +21,39 @@ public class ToDoService : IToDoService {
 
 		name = name.Trim();
 
-		if (_tasks.Count(t => t.User.UserId == user.UserId) >= _maxTaskCount)
+		if (_toDoRepository.CountActive(user.UserId) >= _maxTaskCount)
 			throw new TaskCountLimitException(_maxTaskCount);
 
 		if (name.Length > _maxTaskLength)
 			throw new TaskLengthLimitException(name.Length, _maxTaskLength);
 
-		if (_tasks.Any(t => t.User.UserId == user.UserId && string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase)))
+		if (_toDoRepository.ExistsByName(user.UserId, name))
 			throw new DuplicateTaskException(name);
 
 		var task = new ToDoItem(user, name);
-		_tasks.Add(task);
+		_toDoRepository.Add(task);
 		return task;
 	}
 
 	public void Delete(Guid id) {
-		var task = _tasks.FirstOrDefault(t => t.Id == id);
+		var task = _toDoRepository.Get(id);
 
 		if (task is null)
 			throw new KeyNotFoundException($"Задача {id} не найдена");
 
-		_tasks.Remove(task);
+		_toDoRepository.Delete(id);
 	}
 
 	public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId) {
-		return _tasks.Where(t => t.User.UserId == userId).ToList();
+		return _toDoRepository.GetAllByUserId(userId);
 	}
 
 	public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId) {
-		return _tasks.Where(t => t.User.UserId == userId && t.State == ToDoItemState.Active).ToList();
+		return _toDoRepository.GetActiveByUserId(userId);
 	}
 
 	public void MarkCompleted(Guid id) {
-		var task = _tasks.FirstOrDefault(t => t.Id == id);
+		var task = _toDoRepository.Get(id);
 
 		if (task is null)
 			throw new KeyNotFoundException($"Задача {id} не найдена");
@@ -60,5 +62,10 @@ public class ToDoService : IToDoService {
 			throw new InvalidOperationException("Задача уже выполнена");
 
 		task.Complete();
+		_toDoRepository.Update(task);
+	}
+
+	public IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix) {
+		return _toDoRepository.Find(user.UserId, t => t.Name.StartsWith(namePrefix, StringComparison.OrdinalIgnoreCase));
 	}
 }
