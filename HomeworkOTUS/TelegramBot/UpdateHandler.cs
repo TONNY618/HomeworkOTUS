@@ -133,7 +133,7 @@ public class UpdateHandler : IUpdateHandler {
 
 			botClient.SendMessage(chat, $"""
 			                             Список {title}:
-			                             {string.Join("\n", tasks.Select((t, i) => $"{i + 1}. {(state ? $"({t.State}) "  : "")}{t.Name} - {t.CreatedAt:dd.MM.yyyy HH:mm:ss} - {t.Id}"))}
+			                             {string.Join("\n", tasks.Select((t, i) => $"{i + 1}. {(state ? $"({t.State}) " : "")}{t.Name} - {t.CreatedAt:dd.MM.yyyy HH:mm:ss} - {t.Id}"))}
 			                             """);
 		}
 	}
