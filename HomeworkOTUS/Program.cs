@@ -5,7 +5,7 @@ using Otus.ToDoList.ConsoleBot;
 
 namespace HomeworkOTUS;
 
-internal static class Lesson6 {
+internal static class Program {
 	private static void Main() {
 		using var cts = new CancellationTokenSource();
 
