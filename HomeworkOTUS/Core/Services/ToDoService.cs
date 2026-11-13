@@ -15,45 +15,45 @@ public class ToDoService : IToDoService {
 		_maxTaskLength = maxTaskLength;
 	}
 
-	public ToDoItem Add(ToDoUser user, string name) {
+	public async Task<ToDoItem> AddAsync(ToDoUser user, string name, CancellationToken ct = default) {
 		if (string.IsNullOrWhiteSpace(name))
 			throw new ArgumentException("Имя не может быть пустым");
 
 		name = name.Trim();
 
-		if (_toDoRepository.CountActive(user.UserId) >= _maxTaskCount)
+		if (await _toDoRepository.CountActiveAsync(user.UserId, ct) >= _maxTaskCount)
 			throw new TaskCountLimitException(_maxTaskCount);
 
 		if (name.Length > _maxTaskLength)
 			throw new TaskLengthLimitException(name.Length, _maxTaskLength);
 
-		if (_toDoRepository.ExistsByName(user.UserId, name))
+		if (await _toDoRepository.ExistsByNameAsync(user.UserId, name, ct))
 			throw new DuplicateTaskException(name);
 
 		var task = new ToDoItem(user, name);
-		_toDoRepository.Add(task);
+		await _toDoRepository.AddAsync(task, ct);
 		return task;
 	}
 
-	public void Delete(Guid id) {
-		var task = _toDoRepository.Get(id);
+	public async Task DeleteAsync(Guid id, CancellationToken ct = default) {
+		var task = await _toDoRepository.GetAsync(id, ct);
 
 		if (task is null)
 			throw new KeyNotFoundException($"Задача {id} не найдена");
 
-		_toDoRepository.Delete(id);
+		await _toDoRepository.DeleteAsync(id, ct);
 	}
 
-	public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId) {
-		return _toDoRepository.GetAllByUserId(userId);
+	public async Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId, CancellationToken ct = default) {
+		return await _toDoRepository.GetAllByUserIdAsync(userId, ct);
 	}
 
-	public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId) {
-		return _toDoRepository.GetActiveByUserId(userId);
+	public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct = default) {
+		return await _toDoRepository.GetActiveByUserIdAsync(userId, ct);
 	}
 
-	public void MarkCompleted(Guid id) {
-		var task = _toDoRepository.Get(id);
+	public async Task MarkCompletedAsync(Guid id, CancellationToken ct = default) {
+		var task = await _toDoRepository.GetAsync(id, ct);
 
 		if (task is null)
 			throw new KeyNotFoundException($"Задача {id} не найдена");
@@ -62,10 +62,10 @@ public class ToDoService : IToDoService {
 			throw new InvalidOperationException("Задача уже выполнена");
 
 		task.Complete();
-		_toDoRepository.Update(task);
+		await _toDoRepository.UpdateAsync(task, ct);
 	}
 
-	public IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix) {
-		return _toDoRepository.Find(user.UserId, t => t.Name.StartsWith(namePrefix, StringComparison.OrdinalIgnoreCase));
+	public async Task<IReadOnlyList<ToDoItem>> FindAsync(ToDoUser user, string namePrefix, CancellationToken ct = default) {
+		return await _toDoRepository.FindAsync(user.UserId, t => t.Name.StartsWith(namePrefix, StringComparison.OrdinalIgnoreCase), ct);
 	}
 }
