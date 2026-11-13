@@ -47,26 +47,26 @@ public class UpdateHandler : IUpdateHandler {
 					break;
 				case "help":
 					await botClient.SendMessage(chat, """
-					                            Список всех команд:
-					                            /start => регистрация.
-					                            /help => вызывает эту справку.
-					                            /info => пишет версию и дату создания этой программы.
-					                            /addtask <name> => создаёт задачу.
-					                            /showtasks => показывает список активных задач.
-					                            /showalltasks => отображает список абсолютно всех задач.
-					                            /completetask <id> => помечает задачу как выполненную по её Id.
-					                            /removetask <id> => удаляет задачу по её Id.
-					                            /report => выводит статистику по задачам.
-					                            /find <prefix> => найти задачи, которые начинаются с указанного текста.
-					                            """, ct);
+					                                  Список всех команд:
+					                                  /start => регистрация.
+					                                  /help => вызывает эту справку.
+					                                  /info => пишет версию и дату создания этой программы.
+					                                  /addtask <name> => создаёт задачу.
+					                                  /showtasks => показывает список активных задач.
+					                                  /showalltasks => отображает список абсолютно всех задач.
+					                                  /completetask <id> => помечает задачу как выполненную по её Id.
+					                                  /removetask <id> => удаляет задачу по её Id.
+					                                  /report => выводит статистику по задачам.
+					                                  /find <prefix> => найти задачи, которые начинаются с указанного текста.
+					                                  """, ct);
 					break;
 				case "info":
 					await botClient.SendMessage(chat, """
-					                            Информация о программе:
-					                            Версия: 0.4.0
-					                            Дата создания: 29.09.2026
-					                            Дата обновления: 13.11.2026
-					                            """, ct);
+					                                  Информация о программе:
+					                                  Версия: 0.4.0
+					                                  Дата создания: 29.09.2026
+					                                  Дата обновления: 13.11.2026
+					                                  """, ct);
 					break;
 				case "addtask":
 					if (string.IsNullOrWhiteSpace(argument)) {
@@ -134,9 +134,9 @@ public class UpdateHandler : IUpdateHandler {
 			}
 
 			await botClient.SendMessage(chat, $"""
-			                             Список {title}:
-			                             {string.Join("\n", tasks.Select((t, i) => $"{i + 1}. {(state ? $"({t.State}) " : "")}{t.Name} - {t.CreatedAt:dd.MM.yyyy HH:mm:ss} - {t.Id}"))}
-			                             """, ct);
+			                                   Список {title}:
+			                                   {string.Join("\n", tasks.Select((t, i) => $"{i + 1}. {(state ? $"({t.State}) " : "")}{t.Name} - {t.CreatedAt:dd.MM.yyyy HH:mm:ss} - {t.Id}"))}
+			                                   """, ct);
 		}
 	}
 
