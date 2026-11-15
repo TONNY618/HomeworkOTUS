@@ -6,15 +6,19 @@ namespace HomeworkOTUS.Infrastructure.DataAccess;
 public class InMemoryUserRepository : IUserRepository {
 	private readonly List<ToDoUser> _users = [];
 
-	public ToDoUser? GetUser(Guid userId) {
-		return _users.FirstOrDefault(u => u.UserId == userId);
+	public Task<ToDoUser?> GetUserAsync(Guid userId, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
+		return Task.FromResult(_users.FirstOrDefault(u => u.UserId == userId));
 	}
 
-	public ToDoUser? GetUserByTelegramUserId(long telegramUserId) {
-		return _users.FirstOrDefault(u => u.TelegramUserId == telegramUserId);
+	public Task<ToDoUser?> GetUserByTelegramUserIdAsync(long telegramUserId, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
+		return Task.FromResult(_users.FirstOrDefault(u => u.TelegramUserId == telegramUserId));
 	}
 
-	public void Add(ToDoUser user) {
+	public Task AddAsync(ToDoUser user, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
 		_users.Add(user);
+		return Task.CompletedTask;
 	}
 }

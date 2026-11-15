@@ -6,45 +6,55 @@ namespace HomeworkOTUS.Infrastructure.DataAccess;
 public class InMemoryToDoRepository : IToDoRepository {
 	private readonly List<ToDoItem> _tasks = [];
 
-	public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId) {
-		return _tasks.Where(t => t.User.UserId == userId).ToList();
+	public Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
+		return Task.FromResult((IReadOnlyList<ToDoItem>) [.. _tasks.Where(t => t.User.UserId == userId)]);
 	}
 
-	public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId) {
-		return _tasks.Where(t => t.User.UserId == userId && t.State == ToDoItemState.Active).ToList();
+	public Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
+		return Task.FromResult((IReadOnlyList<ToDoItem>) [.. _tasks.Where(t => t.User.UserId == userId && t.State == ToDoItemState.Active)]);
 	}
 
-	public ToDoItem? Get(Guid id) {
-		return _tasks.FirstOrDefault(t => t.Id == id);
+	public Task<ToDoItem?> GetAsync(Guid id, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
+		return Task.FromResult(_tasks.FirstOrDefault(t => t.Id == id));
 	}
 
-	public void Add(ToDoItem item) {
+	public Task AddAsync(ToDoItem item, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
 		_tasks.Add(item);
+		return Task.CompletedTask;
 	}
 
-	public void Update(ToDoItem item) {
+	public Task UpdateAsync(ToDoItem item, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
 		var index = _tasks.FindIndex(i => i.Id == item.Id);
 
 		if (index != -1)
 			_tasks[index] = item;
+
+		return Task.CompletedTask;
 	}
 
-	public void Delete(Guid id) {
-		var task = Get(id);
-
-		if (task is not null)
-			_tasks.Remove(task);
+	public Task DeleteAsync(Guid id, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
+		_tasks.RemoveAll(t => t.Id == id);
+		return Task.CompletedTask;
 	}
 
-	public bool ExistsByName(Guid userId, string name) {
-		return _tasks.Any(t => t.User.UserId == userId && string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
+	public Task<bool> ExistsByNameAsync(Guid userId, string name, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
+		return Task.FromResult(_tasks.Any(t => t.User.UserId == userId && string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase)));
 	}
 
-	public int CountActive(Guid userId) {
-		return _tasks.Count(t => t.User.UserId == userId && t.State == ToDoItemState.Active);
+	public Task<int> CountActiveAsync(Guid userId, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
+		return Task.FromResult(_tasks.Count(t => t.User.UserId == userId && t.State == ToDoItemState.Active));
 	}
 
-	public IReadOnlyList<ToDoItem> Find(Guid userId, Func<ToDoItem, bool> pred) {
-		return _tasks.Where(t => t.User.UserId == userId && pred(t)).ToList();
+	public Task<IReadOnlyList<ToDoItem>> FindAsync(Guid userId, Func<ToDoItem, bool> pred, CancellationToken ct = default) {
+		ct.ThrowIfCancellationRequested();
+		return Task.FromResult<IReadOnlyList<ToDoItem>>([.. _tasks.Where(t => t.User.UserId == userId && pred(t))]);
 	}
 }

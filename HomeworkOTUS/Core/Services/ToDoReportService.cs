@@ -10,8 +10,8 @@ public class ToDoReportService : IToDoReportService {
 		_toDoRepository = toDoRepository;
 	}
 
-	public (int total, int completed, int active, DateTime generatedAt) GetUserStats(Guid userId) {
-		var tasks = _toDoRepository.GetAllByUserId(userId);
+	public async Task<(int total, int completed, int active, DateTime generatedAt)> GetUserStatsAsync(Guid userId, CancellationToken ct = default) {
+		var tasks = await _toDoRepository.GetAllByUserIdAsync(userId, ct);
 
 		return (total: tasks.Count,
 			completed: tasks.Count(t => t.State == ToDoItemState.Completed),
