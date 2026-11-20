@@ -1,11 +1,30 @@
+using System.Text;
 using HomeworkOTUS.Core.Entities;
 using HomeworkOTUS.Core.Services;
-using Otus.ToDoList.ConsoleBot;
-using Otus.ToDoList.ConsoleBot.Types;
+using Telegram.Bot;
+using Telegram.Bot.Polling;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace HomeworkOTUS.TelegramBot;
 
 public class UpdateHandler : IUpdateHandler {
+	private static readonly ReplyKeyboardMarkup StartKeyboard = new(
+		new KeyboardButton[][] {
+			[new KeyboardButton("/start")],
+		}) {
+		ResizeKeyboard = true,
+	};
+
+	private static readonly ReplyKeyboardMarkup RegKeyboard = new(
+		new KeyboardButton[][] {
+			[new KeyboardButton("/showalltasks"), new KeyboardButton("/showtasks")],
+			[new KeyboardButton("/report")],
+		}) {
+		ResizeKeyboard = true,
+	};
+
 	private readonly IUserService _userService;
 	private readonly IToDoService _toDoService;
 	private readonly IToDoReportService _toDoReportService;
@@ -17,12 +36,13 @@ public class UpdateHandler : IUpdateHandler {
 	}
 
 	public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct) {
-		var msg = update.Message;
-		var chat = msg.Chat;
-		var raw = msg.Text.Trim();
+		if (update.Message is not {Text: {} raw, From: {} from} msg) return;
 
-		var userId = msg.From.Id;
-		var username = msg.From.Username ?? "Пользователь";
+		var chat = msg.Chat;
+		raw = raw.Trim();
+
+		var userId = from.Id;
+		var username = from.Username ?? from.FirstName;
 		var user = await _userService.GetUserAsync(userId, ct);
 
 		var parts = raw.Split(' ', 2);
@@ -33,7 +53,7 @@ public class UpdateHandler : IUpdateHandler {
 
 		try {
 			if (user is null && !noRegCommands.Contains(command)) {
-				await botClient.SendMessage(chat, $"Без регистрации вам доступны только команды {string.Join(", ", noRegCommands)}", ct);
+				await SendMsgAsync($"Без регистрации вам доступны только команды {string.Join(", ", noRegCommands)}");
 				return;
 			}
 
@@ -41,41 +61,41 @@ public class UpdateHandler : IUpdateHandler {
 				case "start":
 					if (user is null) {
 						user = await _userService.RegisterUserAsync(userId, username, ct);
-						await botClient.SendMessage(chat, $"Здравствуйте, {user.TelegramUserName}. Теперь вам доступно создание задач.", ct);
+						await SendMsgAsync($"Здравствуйте, {user.TelegramUserName}. Теперь вам доступно создание задач.");
 					} else
-						await botClient.SendMessage(chat, $"Вы уже зарегистрированы: {user.TelegramUserName}", ct);
+						await SendMsgAsync($"Вы уже зарегистрированы: {user.TelegramUserName}");
 					break;
 				case "help":
-					await botClient.SendMessage(chat, """
-					                                  Список всех команд:
-					                                  /start => регистрация.
-					                                  /help => вызывает эту справку.
-					                                  /info => пишет версию и дату создания этой программы.
-					                                  /addtask <name> => создаёт задачу.
-					                                  /showtasks => показывает список активных задач.
-					                                  /showalltasks => отображает список абсолютно всех задач.
-					                                  /completetask <id> => помечает задачу как выполненную по её Id.
-					                                  /removetask <id> => удаляет задачу по её Id.
-					                                  /report => выводит статистику по задачам.
-					                                  /find <prefix> => найти задачи, которые начинаются с указанного текста.
-					                                  """, ct);
+					await SendMsgAsync("""
+					                   Список всех команд:
+					                   /start => регистрация.
+					                   /help => вызывает эту справку.
+					                   /info => пишет версию и дату создания этого бота.
+					                   /addtask <name> => создаёт задачу.
+					                   /showtasks => показывает список активных задач.
+					                   /showalltasks => отображает список абсолютно всех задач.
+					                   /completetask <id> => помечает задачу как выполненную по её Id.
+					                   /removetask <id> => удаляет задачу по её Id.
+					                   /report => выводит статистику по задачам.
+					                   /find <prefix> => найти задачи, которые начинаются с указанного текста.
+					                   """);
 					break;
 				case "info":
-					await botClient.SendMessage(chat, """
-					                                  Информация о программе:
-					                                  Версия: 0.4.0
-					                                  Дата создания: 29.09.2026
-					                                  Дата обновления: 13.11.2026
-					                                  """, ct);
+					await SendMsgAsync("""
+					                   Информация о программе:
+					                   Версия: 0.5.0
+					                   Дата создания: 29.09.2026
+					                   Дата обновления: 19.11.2026
+					                   """);
 					break;
 				case "addtask":
 					if (string.IsNullOrWhiteSpace(argument)) {
-						await botClient.SendMessage(chat, "Описание задачи не может быть пустым.", ct);
+						await SendMsgAsync("Описание задачи не может быть пустым.");
 						return;
 					}
 
 					var newItem = await _toDoService.AddAsync(user!, argument, ct);
-					await botClient.SendMessage(chat, $"задача \"{newItem.Name}\" добавлена в список ({newItem.Id}).", ct);
+					await SendMsgAsync($"задача \"{newItem.Name}\" добавлена в список ({newItem.Id}).");
 					break;
 				case "showtasks":
 					await RevealTasksAsync(await _toDoService.GetActiveByUserIdAsync(user!.UserId, ct), "активных задач", false);
@@ -85,31 +105,31 @@ public class UpdateHandler : IUpdateHandler {
 					break;
 				case "completetask":
 					if (!Guid.TryParse(argument, out var compId)) {
-						await botClient.SendMessage(chat, "Неверный формат Id.", ct);
+						await SendMsgAsync("Неверный формат Id.");
 						return;
 					}
 
 					await _toDoService.MarkCompletedAsync(compId, ct);
 
-					await botClient.SendMessage(chat, $"Задача {compId} выполнена.", ct);
+					await SendMsgAsync($"Задача {compId} выполнена.");
 					break;
 				case "removetask":
 					if (!Guid.TryParse(argument, out var remId)) {
-						await botClient.SendMessage(chat, "Неверный формат Id.", ct);
+						await SendMsgAsync("Неверный формат Id.");
 						return;
 					}
 
 					await _toDoService.DeleteAsync(remId, ct);
 
-					await botClient.SendMessage(chat, $"Задача {remId} удалена.", ct);
+					await SendMsgAsync($"Задача {remId} удалена.");
 					break;
 				case "report":
 					var (total, completed, active, generatedAt) = await _toDoReportService.GetUserStatsAsync(user!.UserId, ct);
-					await botClient.SendMessage(chat, $"{generatedAt:dd.MM.yyyy HH:mm:ss}. Всего: {total}, завершённые: {completed}, активные: {active}.", ct);
+					await SendMsgAsync($"{generatedAt:dd.MM.yyyy HH:mm:ss}. Всего: {total}, завершённые: {completed}, активные: {active}.");
 					break;
 				case "find":
 					if (string.IsNullOrWhiteSpace(argument)) {
-						await botClient.SendMessage(chat, "Префикс не может быть пустым.", ct);
+						await SendMsgAsync("Префикс не может быть пустым.");
 						return;
 					}
 
@@ -117,34 +137,62 @@ public class UpdateHandler : IUpdateHandler {
 					await RevealTasksAsync(foundTasks, $"задач с префиксом {argument}", true);
 					break;
 				default:
-					await botClient.SendMessage(chat, "Неизвестная команда. Введите /help для получения справки.", ct);
+					await SendMsgAsync("Неизвестная команда. Введите /help для получения справки.");
 					break;
 			}
 		} catch (OperationCanceledException) {
 			throw;
 		} catch (Exception e) {
-			await botClient.SendMessage(chat, $"Ошибка: {e.Message}", ct);
+			await SendMsgAsync($"Ошибка: {e.Message}");
 		}
 		return;
 
+		Task SendMsgAsync(string text, ParseMode parseMode = ParseMode.None) =>
+			botClient.SendMessage(
+				chat,
+				text,
+				parseMode: parseMode,
+				replyMarkup: user is null ? StartKeyboard : RegKeyboard,
+				cancellationToken: ct);
+
 		async Task RevealTasksAsync(IReadOnlyList<ToDoItem> tasks, string title, bool state) {
 			if (tasks.Count == 0) {
-				await botClient.SendMessage(chat, $"Список {title} пуст.", ct);
+				await SendMsgAsync($"Список {title} пуст.");
 				return;
 			}
 
-			await botClient.SendMessage(chat, $"""
-			                                   Список {title}:
-			                                   {string.Join("\n", tasks.Select((t, i) => $"{i + 1}. {(state ? $"({t.State}) " : "")}{t.Name} - {t.CreatedAt:dd.MM.yyyy HH:mm:ss} - {t.Id}"))}
-			                                   """, ct);
+			var lines = tasks.Select((t, i) => {
+				var statePart = state ? ClearMark($"({t.State}) ") : "";
+				var namePart = ClearMark(t.Name);
+				var datePart = ClearMark($"{t.CreatedAt:dd.MM.yyyy HH:mm:ss}");
+				return $@"{i + 1}\. {statePart}{namePart} \- {datePart} \- `{t.Id}`";
+			});
+
+			await SendMsgAsync($"""
+			                    Список {ClearMark(title)}:
+			                    {string.Join("\n", lines)}
+			                    """, ParseMode.MarkdownV2);
 		}
 	}
 
-	public Task HandleErrorAsync(ITelegramBotClient botClient, Exception e, CancellationToken ct) {
+	public Task HandleErrorAsync(ITelegramBotClient botClient, Exception e, HandleErrorSource source, CancellationToken ct) {
 		var color = Console.ForegroundColor;
 		Console.ForegroundColor = ConsoleColor.Red;
-		Console.WriteLine($"Ошибка: {e.GetType().Name} - {e.Message}");
+		Console.WriteLine($"Ошибка ({source}): {e.GetType().Name} - {e.Message}");
 		Console.ForegroundColor = color;
 		return Task.CompletedTask;
+	}
+
+	private static string ClearMark(string text) {
+		ReadOnlySpan<char> specialChars = ['\\', '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
+		var sb = new StringBuilder(text.Length);
+
+		foreach (var ch in text) {
+			if (specialChars.Contains(ch))
+				sb.Append('\\');
+			sb.Append(ch);
+		}
+
+		return sb.ToString();
 	}
 }
