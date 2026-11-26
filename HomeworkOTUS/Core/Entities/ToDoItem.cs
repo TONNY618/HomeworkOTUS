@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace HomeworkOTUS.Core.Entities;
 
 public class ToDoItem {
@@ -15,6 +17,16 @@ public class ToDoItem {
 		CreatedAt = DateTime.UtcNow;
 		State = ToDoItemState.Active;
 		StateChangedAt = null;
+	}
+
+	[JsonConstructor]
+	private ToDoItem(Guid id, ToDoUser user, string name, DateTime createdAt, ToDoItemState state, DateTime? stateChangedAt) {
+		Id = id;
+		User = user;
+		Name = name;
+		CreatedAt = createdAt;
+		State = state;
+		StateChangedAt = stateChangedAt;
 	}
 
 	public void Complete() {

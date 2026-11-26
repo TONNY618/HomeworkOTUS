@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace HomeworkOTUS.Core.Entities;
 
 public class ToDoUser {
@@ -11,5 +13,13 @@ public class ToDoUser {
 		TelegramUserId = telegramUserId;
 		TelegramUserName = telegramUserName;
 		RegisteredAt = DateTime.UtcNow;
+	}
+
+	[JsonConstructor]
+	private ToDoUser(Guid userId, long telegramUserId, string telegramUserName, DateTime registeredAt) {
+		UserId = userId;
+		TelegramUserId = telegramUserId;
+		TelegramUserName = telegramUserName;
+		RegisteredAt = registeredAt;
 	}
 }

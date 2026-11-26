@@ -27,8 +27,9 @@ internal static class Program {
 		Console.CancelKeyPress += cancelHandler;
 
 		try {
-			var userRepository = new InMemoryUserRepository();
-			var toDoRepository = new InMemoryToDoRepository();
+			var dataDir = Path.Combine(AppContext.BaseDirectory, "data");
+			var userRepository = new FileUserRepository(Path.Combine(dataDir, "users"));
+			var toDoRepository = new FileToDoRepository(Path.Combine(dataDir, "todos"));
 
 			var userService = new UserService(userRepository);
 			var toDoService = new ToDoService(toDoRepository);
